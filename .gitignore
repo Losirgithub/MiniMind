@@ -1,0 +1,44 @@
+# Python 通用忽略
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyTorch/深度学习相关
+*.pth
+*.pt
+*.pkl
+*.ckpt
+data/  # 如果有大的数据集文件夹，建议忽略（GitHub 不适合传大文件）
+logs/
+wandb/
+
+# Anaconda 环境
+.conda/
+env/
+venv/
+*.yml  # 如需分享环境配置可取消注释
+.conda-lock.yml
+
+# 系统文件
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
