@@ -176,6 +176,8 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
     return q_embed, k_embed
 
 
+# 复用Key,Value
+# 几个参数说明：
 def repeat_kv(x: torch.Tensor, n_rep: int) -> torch.Tensor:
     bs, slen, num_key_value_heads, head_dim = x.shape
     if n_rep == 1:
@@ -226,6 +228,12 @@ class Attention(nn.Module):
             and args.flash_attention
         )
 
+    # 投影，计算q,k,v
+    # 把输入拆分成多头
+    # 应用RoPE位置编码
+    # 对k,v 进行缓存和复用
+    # 计算attention scores，支持flash attention和普通attention两种实现
+    # 最后把多头的输出合并，并通过输出投影层
     def forward(
         self,
         x: torch.Tensor,
@@ -287,3 +295,33 @@ class Attention(nn.Module):
         output = output.transpose(1, 2).reshape(bsz, seq_len, -1)
         output = self.resid_dropout(self.o_proj(output))
         return output, past_kv
+
+
+# 初始化
+# 升维
+# 降维
+# 门控
+# dropout
+# 激活函数
+class FeedForward(nn.Module):
+    def __init__(self, config: MokioMindConfig):
+        super().__init__()
+        if config.intermediate_size is None:
+            intermediate_size = int(config.hidden_size * 8 / 3)
+            config.intermediate_size = 64 * ((intermediate_size + 64 - 1) // 64)
+
+        self.gate_proj = nn.Linear(
+            config.hidden_size, config.intermediate_size, bias=False
+        )
+        self.down_proj = nn.Linear(
+            config.intermediate_size, config.hidden_size, bias=False
+        )
+        self.up_proj = nn.Linear(
+            config.hidden_size, config.intermediate_size, bias=False
+        )
+        self.dropout = nn.Dropout(config.dropout)
+        self.act_fn = ACT2FN[config.hidden_act]
+
+    def forward(self, x):
+        gated = self.act_fn(self.gate_proj(x)) * self.up_proj(x)
+        return self.dropout(self.down_proj(gated))
